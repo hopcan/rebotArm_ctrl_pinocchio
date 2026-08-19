@@ -12,16 +12,12 @@ rebotArm_DM_model_path = project_root/"urdf/reBot-DevArm_fixend_description/urdf
 
 model = pin.buildModelFromUrdf(rebotArm_DM_model_path)
 data = model.createData()
-# q = np.array([0,-0.5,-0.5 ,0,0,0])
-# pin.computeGeneralizedGravity(model, data, q)
 
 from rebotArm_handle import reBotArm_handle
 import time
 
-motor_last_state = {i: None for i in list(range(1, 8))} 
-motors_last_pos=[0,0,0 ,0,0,0 ,0]
-
-def gravity_conpensation_control(handle,motor_last_state,motors_last_pos) :
+def gravity_conpensation_control(handle) :
+    motors_last_pos=[0]*7
     motor_last_state = handle.motor_state
     for motor_id in list(range(1, 8)) :
         motors_last_pos[motor_id - 1] =  motor_last_state[motor_id].pos
@@ -44,5 +40,5 @@ if __name__ == "__main__":
             print("Controller failed to connect.")
 
         while True:
-            gravity_conpensation_control(handle,motor_last_state=motor_last_state,motors_last_pos=motors_last_pos)
+            gravity_conpensation_control(handle)
             time.sleep(0.1)
