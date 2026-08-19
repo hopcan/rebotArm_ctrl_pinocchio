@@ -3,7 +3,7 @@
 Repository with helpers and examples to control the reBot arm and run
 Pinocchio-based gravity/kinematics examples.
 
-## 安装（按你提供的命令）
+## 安装
 在终端执行：
 
 ```bash
