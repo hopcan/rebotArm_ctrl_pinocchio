@@ -7,7 +7,8 @@ Pinocchio-based gravity/kinematics examples.
 在终端执行：
 
 ```bash
-conda create -n pinoccio python=3.12
+conda create -n pinocchio python=3.12
+conda activate pinocchio
 pip install pyyaml motorbridge
 pip install pin
 ```

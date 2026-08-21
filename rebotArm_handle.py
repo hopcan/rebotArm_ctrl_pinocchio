@@ -6,11 +6,10 @@ import os
 base_dir = os.path.dirname(os.path.abspath(__file__))
 rebotDM_file_path = os.path.join(base_dir, 'config', 'rebotDM.yaml')
 rebotRS_file_path = os.path.join(base_dir, 'config', 'rebotRS.yaml')
-print(rebotDM_file_path)
 
 class reBotArm_handle:
 
-    def __init__(self, interface,arm_version="rebotDM"):  #rebotDM or rebotRS
+    def __init__(self, interface,arm_version = "rebotDM",config_path = None):  #rebotDM or rebotRS
         self.is_connected = False
         self.is_all_ids_valid = False
         self.ctrl = interface
@@ -23,11 +22,13 @@ class reBotArm_handle:
         self.joint_posmin = {i: None for i in self.expected_ids} 
         self.motor_state = {i: None for i in self.expected_ids} 
         self.arm_version = arm_version
-        if self.arm_version == "rebotDM" :
-            self.file_path = rebotDM_file_path 
-        elif self.arm_version == "rebotRS" :
-            self.file_path = rebotRS_file_path
-
+        if config_path == None :
+            if self.arm_version == "rebotDM" :
+                self.file_path = rebotDM_file_path 
+            elif self.arm_version == "rebotRS" :
+                self.file_path = rebotRS_file_path
+        else :
+            self.file_path = config_path
     def _load_robot_config(self, file_path=None):
         if file_path is None:
             file_path = self.file_path
@@ -126,6 +127,22 @@ class reBotArm_handle:
         if len(found_motors) == len(self.expected_ids) :
             print("All ids are valid !")
             return True
+        
+    def get_joints_state(self):
+        joints_pos = [0]*7
+        for motor_can_id in list(range(1, 8)):
+            self.motor_handle[motor_can_id].request_feedback()
+            time.sleep(0.01)
+            self.motor_state[motor_can_id] = self.motor_handle[motor_can_id].get_state()
+            joints_pos[motor_can_id-1] = self.motor_state[motor_can_id].pos
+        return joints_pos
+
+    def return_joints_last_pos(self):
+        joints_pos = [0]*7
+        for motor_can_id in list(range(1, 8)):
+            self.motor_state[motor_can_id] = self.motor_handle[motor_can_id].get_state()
+            joints_pos[motor_can_id-1] = self.motor_state[motor_can_id].pos
+        return joints_pos
 
     def connect(self):
         if self._add_motor_to_ctrl():
@@ -251,7 +268,7 @@ class reBotArm_handle:
 
     def return_zero_position(self):
         dt = 0.01  # 10ms 
-        target_pos=[0,0,-0.3,-0.3,0,0,0]
+        target_pos=[0,0,-0.3,-0.1,0,0,0]
         start_time=time.perf_counter()
         while time.perf_counter()- start_time < 3.0:
             if self.arm_version == "rebotDM" :
