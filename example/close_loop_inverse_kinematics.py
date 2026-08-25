@@ -18,12 +18,11 @@ data = model.createData()
 target_pos = [0.3, 0.0, 0.3 ,0.5 ,0 ,0]
 
 
-
 if __name__ == "__main__":
     channel = "/dev/ttyACM0"  
     ctrl =Controller.from_dm_serial(channel, 921600)
     positions = [0]*7
-    with reBotArm_handle(ctrl,"rebotDM",config_path = "/home/pan/rebotArm_ctrl_pinocchio/config/rebotDM_ik.yaml") as handle:
+    with reBotArm_handle(ctrl,"rebotDM",config_path = project_root/"config/rebotDM_ik.yaml") as handle:
         if handle.is_connected:
             print("Controller is connected and ready.")
             print("Motor Use Modes:", handle.use_mode)
