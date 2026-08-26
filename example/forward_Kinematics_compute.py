@@ -40,6 +40,6 @@ if __name__ == "__main__":
             #compute translation and rotation degree
             x,y,z,roll_deg,pitch_deg,yaw_deg = pinocchio_handle.deal_with_matrix_t_r(Matrix_t,Matrix_r)
 
-            print(f"rotation: roll={roll_deg:.2f}°, pitch={pitch_deg:.2f}°, yaw={yaw_deg:.2f}°")
-            print(f"translation: x={x:.2f}m, y={y:.2f}m, z={z:.2f}m")
+            print(f"rotation: roll={roll_deg:.4f}°, pitch={pitch_deg:.4f}°, yaw={yaw_deg:.4f}°")
+            print(f"translation: x={x:.4f}m, y={y:.4f}m, z={z:.4f}m")
             time.sleep(0.1)

@@ -29,9 +29,9 @@ if __name__ == "__main__":
             print("Controller failed to connect.")
 
         # orginal_joints_pos = [0,0,0,0,0,0]
-        target_pos_point = [0.34 ,0 ,0 ,-0.3 ,1.04 ,-0.37]# 0.24 0 0.03 0 0.67 0   0.34 0 0 -0.3 1.04 -0.37  -0.03 0.02 0.41 -0.01 -0.06 0.11 
-        Time = 3
-        dt = 0.3
+        target_pos_point = [0.15 ,0 ,0.02 ,0,1.56 ,0]# 0.24 0 0.03 0 0.67 0   0.34 0 0 -0.3 1.04 -0.37  -0.03 0.02 0.41 -0.01 -0.06 0.11  0.15 0 0 0 1.56 0
+        Time = 2
+        dt = 0.1
         traj_finish_flag = False
         joints_pos = handle.return_joints_last_pos()
         orginal_joints_pos = joints_pos[:6]

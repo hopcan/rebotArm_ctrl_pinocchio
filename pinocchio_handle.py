@@ -16,9 +16,9 @@ def gravity_conpensation_control(joints_pos,model,data) :
     full_torques[:6] = torque 
 
     #add conpensation
-    full_torques[3] *= 2.5   
+    full_torques[3] *= 2.7   
 
-    return motors_last_pos,full_torques
+    return motors_last_pos,full_torques.tolist()
 
 
 
@@ -82,6 +82,10 @@ def clik_compute_joints_pos(origin_joints_pos,target_point,model,data,joint_nums
             success = False
             break
         J = pin.computeFrameJacobian(model, data, q, frame_id)
+        manipulability = np.sqrt(np.linalg.det(J[:6,:] @ J[:6,:].T))
+        if manipulability < 0.001:
+            print("接近奇异点")  
+            return None
         J = -np.dot(pin.Jlog6(iMd.inverse()), J)  #Jlog6：计算 log 的导数。 李代数导数校正  dot(A, B) 就等价于矩阵乘法
         # 阻尼最小二乘求解速度
         JJT = J @ J.T
@@ -98,10 +102,6 @@ def clik_compute_joints_pos(origin_joints_pos,target_point,model,data,joint_nums
         return None
 
 def interp_SE3(oM0: pin.SE3, oM1: pin.SE3, s: float) -> pin.SE3:
-    """Interpolate between two SE3 poses using SE3 logarithm/exponential.
-
-    s in [0,1]
-    """
     if s <= 0.0:
         return oM0
     if s >= 1.0:
@@ -166,6 +166,10 @@ def clik_follow(traj, q0, model, data, frame_name="end_link", damp=1e-6, dt=1e-2
                 print(iteration_nums)
                 break
             J = pin.computeFrameJacobian(model, data, q, frame_id)
+            manipulability = np.sqrt(np.linalg.det(J[:6,:] @ J[:6,:].T))
+            if manipulability < 0.001:
+                print("接近奇异点")  
+                return None
             J = -np.dot(pin.Jlog6(iMd.inverse()), J)  #Jlog6：计算 log 的导数。 李代数导数校正  dot(A, B) 就等价于矩阵乘法
             # 阻尼最小二乘求解速度
             JJT = J @ J.T

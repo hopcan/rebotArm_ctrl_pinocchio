@@ -15,13 +15,14 @@ data = model.createData()
 from rebotArm_handle import reBotArm_handle
 import pinocchio_handle
 import time
-
-
+torque = [0]*7
+adm_pos = [0]*7
+adm_scale = [1.2,5,10, 10,10,10, 10]
 if __name__ == "__main__":
     channel = "/dev/ttyACM0"  
     ctrl =Controller.from_dm_serial(channel, 921600)
 
-    with reBotArm_handle(ctrl,"rebotDM") as handle:
+    with reBotArm_handle(ctrl,"rebotDM",config_path = project_root/"config/rebotDM_gravity.yaml") as handle:
         if handle.is_connected:
             print("Controller is connected and ready.")
             print("Motor Use Modes:", handle.use_mode)
@@ -32,4 +33,4 @@ if __name__ == "__main__":
             joints_pos = handle.return_joints_last_pos()
             motors_last_pos,full_torques = pinocchio_handle.gravity_conpensation_control(joints_pos ,model,data)  
             handle.move_to_joint_positions(positions = motors_last_pos,torque = full_torques)
-            time.sleep(0.1)
+            time.sleep(0.01)

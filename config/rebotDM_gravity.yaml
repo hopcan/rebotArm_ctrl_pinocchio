@@ -2,8 +2,8 @@ joints:
   - name: Shoulder Pan
     motor_can_id: 1   
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0125
         vel_ki: 0.004
@@ -17,8 +17,8 @@ joints:
   - name: Shoulder Lift
     motor_can_id: 2 
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0125
         vel_ki: 0.004
@@ -32,8 +32,8 @@ joints:
   - name: Elbow Flex
     motor_can_id: 3 
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0125
         vel_ki: 0.004
@@ -47,8 +47,8 @@ joints:
   - name:  Wrist Flex
     motor_can_id: 4  
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0008
         vel_ki: 0.002
@@ -62,8 +62,8 @@ joints:
   - name:  Wrist Yaw
     motor_can_id: 5  
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0008
         vel_ki: 0.002
@@ -78,8 +78,8 @@ joints:
   - name:  Wrist Roll
     motor_can_id: 6  
     MIT:
-        kp: 2.0
-        kd: 1.0
+        kp: 0
+        kd: 0
     POS_VEL:
         vel_kp: 0.0008
         vel_ki: 0.002
