@@ -24,8 +24,14 @@ if __name__ == "__main__":
     positions = [0]*7
     with reBotArm_handle(ctrl,"rebotDM",config_path = project_root/"config/rebotDM_ik.yaml") as handle:
         if handle.is_connected:
+            for motor_can_id in list(range(1,8)) :
+                print(f"Motor id {handle.motors[motor_can_id].motor_id}")
+                print(f"Motor Mit cfg:{handle.motors[motor_can_id].mit_cfg}")
+                # print(f"Motor Pos Vel cfg:{handle.motors[motor_can_id].pos_vel_cfg}")
+                print(f"Motor Use Modes:{handle.motors[motor_can_id].use_mode}")
+                print(f"Motor Pos Max:{handle.motors[motor_can_id].pos_max}")
+                print(f"Motor Pos Min:{handle.motors[motor_can_id].pos_min}\n")
             print("Controller is connected and ready.")
-            print("Motor Use Modes:", handle.use_mode)
         else:
             print("Controller failed to connect.")
         origin_joints_pos = handle.return_joints_last_pos()

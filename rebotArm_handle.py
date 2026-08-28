@@ -7,6 +7,22 @@ base_dir = os.path.dirname(os.path.abspath(__file__))
 rebotDM_file_path = os.path.join(base_dir, 'config', 'rebotDM.yaml')
 rebotRS_file_path = os.path.join(base_dir, 'config', 'rebotRS.yaml')
 
+
+from dataclasses import dataclass
+from typing import Optional, Any
+
+@dataclass
+class Motor:
+    motor_id: int
+    handle: Optional[Any] = None
+    mit_cfg: Optional[dict] = None
+    pos_vel_cfg: Optional[dict] = None
+    use_mode: Optional[str] = None
+    pos_max: float = 0.0
+    pos_min: float = 0.0
+    state: Optional[dict] = None
+
+
 class reBotArm_handle:
 
     def __init__(self, interface,arm_version = "rebotDM",config_path = None):  #rebotDM or rebotRS
@@ -14,13 +30,12 @@ class reBotArm_handle:
         self.is_all_ids_valid = False
         self.ctrl = interface
         self.expected_ids = list(range(1, 8))
-        self.motor_handle = {i: None for i in self.expected_ids} 
-        self.motor_mit_cfg = {i: None for i in self.expected_ids} 
-        self.motor_pos_vel_cfg = {i: None for i in self.expected_ids} 
-        self.use_mode = {i: None for i in self.expected_ids} 
-        self.joint_posmax = {i: None for i in self.expected_ids} 
-        self.joint_posmin = {i: None for i in self.expected_ids} 
-        self.motor_state = {i: None for i in self.expected_ids} 
+
+        self.motors = {
+            motor_id: Motor(motor_id=motor_id)
+            for motor_id in self.expected_ids
+        }
+
         self.arm_version = arm_version
         if config_path == None :
             if self.arm_version == "rebotDM" :
@@ -71,22 +86,22 @@ class reBotArm_handle:
             if(self.arm_version=="rebotDM"):
                 motor_master_id = 0x10 + motor_can_id
                 try:
-                    self.motor_handle[motor_can_id] = self.ctrl.add_damiao_motor(motor_can_id, motor_master_id, "4340P")
+                    self.motors[motor_can_id].handle = self.ctrl.add_damiao_motor(motor_can_id, motor_master_id, "4340P")
                 except Exception as e:
                     print(f"[error] motor_can_id=0x{motor_can_id:02X}: {e}")
                     return False
             elif(self.arm_version=="rebotRS"):
                 motor_master_id = 0xfd
                 try:
-                    self.motor_handle[motor_can_id] = self.ctrl.add_robstride_motor(motor_can_id, motor_master_id, "rs-06")
+                    self.motors[motor_can_id].handle = self.ctrl.add_robstride_motor(motor_can_id, motor_master_id, "rs-06")
                 except Exception as e:
                     print(f"[error] motor_can_id=0x{motor_can_id:02X}: {e}")
                     return False
-            self.motor_mit_cfg[motor_can_id] = config['joints'][motor_can_id-1]['MIT']
-            self.motor_pos_vel_cfg[motor_can_id-1] = config['joints'][motor_can_id-1]['POS_VEL']
-            self.use_mode[motor_can_id] = config['joints'][motor_can_id-1]['use_mode']
-            self.joint_posmax[motor_can_id] = config['joints'][motor_can_id-1]['posmax']
-            self.joint_posmin[motor_can_id] = config['joints'][motor_can_id-1]['posmin']
+            self.motors[motor_can_id].mit_cfg = config['joints'][motor_can_id-1]['MIT']
+            self.motors[motor_can_id].pos_vel_cfg = config['joints'][motor_can_id-1]['POS_VEL']
+            self.motors[motor_can_id].use_mode = config['joints'][motor_can_id-1]['use_mode']
+            self.motors[motor_can_id].pos_max = config['joints'][motor_can_id-1]['posmax']
+            self.motors[motor_can_id].pos_min = config['joints'][motor_can_id-1]['posmin']
         
         return True
     
@@ -97,14 +112,14 @@ class reBotArm_handle:
                     motor_master_id = 0x10 + motor_can_id
                     print(f"Checking ID 0x{motor_can_id:02X} ({len(found_motors)+1}/{len(self.expected_ids)})")
                     try:
-                        can_id = self.motor_handle[motor_can_id].get_register_u32(8, timeout_ms=100)
-                        master_id = self.motor_handle[motor_can_id].get_register_u32(7, timeout_ms=100)
+                        can_id = self.motors[motor_can_id].handle.get_register_u32(8, timeout_ms=100)
+                        master_id = self.motors[motor_can_id].handle.get_register_u32(7, timeout_ms=100)
                         #check if the can_id and master_id match the expected values
                         if can_id == motor_can_id and master_id == motor_master_id :
                             found_motors.append(can_id)
                         elif master_id !=motor_master_id:
                             print(f"can id: {can_id:02x} mismatch, offset is wrong")
-                            self.motor_handle[motor_can_id].close()
+                            self.motors[motor_can_id].handle.close()
                             return False  
                     except Exception:
                         # read error, no this can id
@@ -114,11 +129,11 @@ class reBotArm_handle:
                 elif self.arm_version=="rebotRS":
                     print(f"Checking ID 0x{motor_can_id:02X} ({len(found_motors)+1}/{len(self.expected_ids)})")
                     try:
-                        can_id, respond_id = self.motor_handle[motor_can_id].robstride_ping()
+                        can_id, respond_id = self.motors[motor_can_id].handle.robstride_ping()
                         if respond_id == 254 and can_id != None:
                             found_motors.append(can_id)   
                         else :
-                            self.motor_handle[motor_can_id].close()
+                            self.motors[motor_can_id].handle.close()
                             return False  
                     except Exception:
                         # scan error
@@ -131,17 +146,17 @@ class reBotArm_handle:
     def get_joints_state(self):
         joints_pos = [0]*7
         for motor_can_id in list(range(1, 8)):
-            self.motor_handle[motor_can_id].request_feedback()
+            self.motors[motor_can_id].handle.request_feedback()
             time.sleep(0.01)
-            self.motor_state[motor_can_id] = self.motor_handle[motor_can_id].get_state()
-            joints_pos[motor_can_id-1] = self.motor_state[motor_can_id].pos
+            self.motors[motor_can_id].state = self.motors[motor_can_id].handle.get_state()
+            joints_pos[motor_can_id-1] = self.motors[motor_can_id].state.pos
         return joints_pos
 
     def return_joints_last_pos(self):
         joints_pos = [0]*7
         for motor_can_id in list(range(1, 8)):
-            self.motor_state[motor_can_id] = self.motor_handle[motor_can_id].get_state()
-            joints_pos[motor_can_id-1] = self.motor_state[motor_can_id].pos
+            self.motors[motor_can_id].state = self.motors[motor_can_id].handle.get_state()
+            joints_pos[motor_can_id-1] = self.motors[motor_can_id].state.pos
         return joints_pos
 
     def connect(self):
@@ -150,8 +165,8 @@ class reBotArm_handle:
                 try :
                     self.ctrl.enable_all()
                     if self._change_motor_mode() :
-                        for motor_id in list(range(1,8)):
-                            self.motor_state[motor_id] = self.motor_handle[motor_id].get_state()
+                        for motor_can_id in list(range(1,8)):
+                            self.motors[motor_can_id].state = self.motors[motor_can_id].handle.get_state()
                         return True
                     else :
                         return False
@@ -181,13 +196,13 @@ class reBotArm_handle:
         self.ctrl.disable_all()
         for motor_can_id in list(range(1, 8)):
             try:
-                self.motor_handle[motor_can_id].set_zero_position()
+                self.motors[motor_can_id].handle.set_zero_position()
                 time.sleep(0.2)
             except Exception:
                 print(f"motor {motor_can_id}: set zero failed")
                 return False
-            self.motor_handle[motor_can_id].request_feedback()
-            state = self.motor_handle[motor_can_id].get_state()
+            self.motors[motor_can_id].handle.request_feedback()
+            state = self.motors[motor_can_id].handle.get_state()
             if state.pos < 0.1 and state.pos > -0.1:
                 print(f"motor {motor_can_id}: set zero successfully")
             else :
@@ -196,18 +211,18 @@ class reBotArm_handle:
 
     def _change_motor_mode(self):
         for motor_can_id in list(range(1, 8)):
-            if self.use_mode[motor_can_id] is None:
-               self.use_mode[motor_can_id] = "MIT"  # Default to MIT mode if not specified
-            if self.use_mode[motor_can_id] == "MIT":
+            if self.motors[motor_can_id].use_mode is None:
+               self.motors[motor_can_id].use_mode = "MIT"  # Default to MIT mode if not specified
+            if self.motors[motor_can_id].use_mode == "MIT":
                 try:
-                    self.motor_handle[motor_can_id].ensure_mode(Mode.MIT, timeout_ms=1000)
+                    self.motors[motor_can_id].handle.ensure_mode(Mode.MIT, timeout_ms=1000)
                     # print(f"motor {motor_can_id}: change mode to MIT successfully")
                 except Exception:
                     print(f"motor {motor_can_id}: change mode to MIT failed")
                     return False
-            elif self.use_mode[motor_can_id] == "POS_VEL":
+            elif self.motors[motor_can_id].use_mode == "POS_VEL":
                 try:
-                    self.motor_handle[motor_can_id].ensure_mode(Mode.POS_VEL, timeout_ms=1000)
+                    self.motors[motor_can_id].handle.ensure_mode(Mode.POS_VEL, timeout_ms=1000)
                     # print(f"motor {motor_can_id}: change mode to POS_VEL successfully")
                 except Exception:
                     print(f"motor {motor_can_id}: change mode to POS_VEL failed")
@@ -222,11 +237,11 @@ class reBotArm_handle:
             print("Positions list length does not match number of motors.")
             return False
         for motor_can_id in list(range(1, 8)):
-            if  positions[motor_can_id-1] > self.joint_posmax[motor_can_id] :
-                positions[motor_can_id-1] = self.joint_posmax[motor_can_id]
-            if  positions[motor_can_id-1] < self.joint_posmin[motor_can_id]:
-                positions[motor_can_id-1] = self.joint_posmin[motor_can_id]
-            if  self.use_mode[motor_can_id] == "MIT":
+            if  positions[motor_can_id-1] > self.motors[motor_can_id].pos_max :
+                positions[motor_can_id-1] = self.motors[motor_can_id].pos_max
+            if  positions[motor_can_id-1] < self.motors[motor_can_id].pos_min:
+                positions[motor_can_id-1] = self.motors[motor_can_id].pos_min
+            if  self.motors[motor_can_id].use_mode == "MIT":
                 if velocity is None:
                     vel= 0.0
                 else :
@@ -236,34 +251,34 @@ class reBotArm_handle:
                 else :
                     tau = torque[motor_can_id-1]
             if self.arm_version == "rebotRS":
-                if self.use_mode  [motor_can_id] == "MIT" :
-                    self.motor_handle[motor_can_id].send_mit(
+                if self.motors[motor_can_id].use_mode == "MIT" :
+                    self.motors[motor_can_id].handle.send_mit(
                         pos=positions[motor_can_id-1]*-1,    
                         vel=vel*-1,
-                        kp=self.motor_mit_cfg[motor_can_id]["kp"],    
-                        kd=self.motor_mit_cfg[motor_can_id]["kd"],    
+                        kp=self.motors[motor_can_id].mit_cfg["kp"],    
+                        kd=self.motors[motor_can_id].mit_cfg["kd"],    
                         tau=tau*-1   
                     )
-                elif self.use_mode [motor_can_id] == "POS_VEL" :    
-                    self.motor_handle[motor_can_id].send_pos_vel(
+                elif self.motors[motor_can_id].use_mode == "POS_VEL" :    
+                    self.motors[motor_can_id].handle.send_pos_vel(
                         pos=positions[motor_can_id-1]*-1,    # target angle（rad）
                         vlim=1.5    # max vel（rad/s）
                     )
             elif self.arm_version == "rebotDM":
-                if self.use_mode  [motor_can_id] == "MIT" :
-                    self.motor_handle[motor_can_id].send_mit(
+                if self.motors[motor_can_id].use_mode == "MIT" :
+                    self.motors[motor_can_id].handle.send_mit(
                     pos=positions[motor_can_id-1],    
                     vel=vel,
-                    kp=self.motor_mit_cfg[motor_can_id]["kp"],    
-                    kd=self.motor_mit_cfg[motor_can_id]["kd"],    
+                    kp=self.motors[motor_can_id].mit_cfg["kp"],    
+                    kd=self.motors[motor_can_id].mit_cfg["kd"],    
                     tau=tau  
                 )
-                elif self.use_mode [motor_can_id] == "POS_VEL":    
-                    self.motor_handle[motor_can_id].send_pos_vel(
+                elif self.motors[motor_can_id].use_mode == "POS_VEL":    
+                    self.motors[motor_can_id].handle.send_pos_vel(
                         pos=positions[motor_can_id-1],    # target angle（rad）
                         vlim=1.5    # max vel（rad/s）
                     )
-            self.motor_state[motor_can_id] = self.motor_handle[motor_can_id].get_state()
+            self.motors[motor_can_id].state = self.motors[motor_can_id].handle.get_state()
         return True
 
     def return_zero_position(self):
@@ -272,62 +287,62 @@ class reBotArm_handle:
         start_time=time.perf_counter()
         while time.perf_counter()- start_time < 3.0:
             if self.arm_version == "rebotDM" :
-                for motor_id in [1,2,3]:
-                    if  self.use_mode[motor_id] == "MIT":
-                        self.motor_handle[motor_id].send_mit(
-                            pos=target_pos[motor_id] ,    
+                for motor_can_id in [1,2,3]:
+                    if  self.motors[motor_can_id].use_mode == "MIT":
+                        self.motors[motor_can_id].handle.send_mit(
+                            pos=target_pos[motor_can_id - 1] ,    
                             vel=0.0,
                             kp=20.0 ,   
                             kd=12.0,    
                             tau=0.0   
                         )
-                    if  self.use_mode[motor_id] == "POS_VEL":
-                        self.motor_handle[motor_id].send_pos_vel(
+                    if  self.motors[motor_can_id].use_mode == "POS_VEL":
+                        self.motors[motor_can_id].handle.send_pos_vel(
                             pos=0.0,    # target angle（rad）
                             vlim=1.5    # max vel（rad/s）
                         )
                     time.sleep(dt)
-                for motor_id in [4,5,6,7]:
-                    if  self.use_mode[motor_id] == "MIT":
-                        self.motor_handle[motor_id].send_mit(
-                            pos=target_pos[motor_id-1] ,    
+                for motor_can_id in [4,5,6,7]:
+                    if  self.motors[motor_can_id].use_mode == "MIT":
+                        self.motors[motor_can_id].handle.send_mit(
+                            pos=target_pos[motor_can_id - 1] ,    
                             vel=0.0,
-                            kp=10.0 ,   
-                            kd=6.0,    
+                            kp=20.0 ,   
+                            kd=12.0,    
                             tau=0.0   
                         )
-                    if  self.use_mode[motor_id] == "POS_VEL":
-                        self.motor_handle[motor_id].send_pos_vel(
+                    if  self.motors[motor_can_id].use_mode == "POS_VEL":
+                        self.motors[motor_can_id].handle.send_pos_vel(
                             pos=0.0,    # target angle（rad）
                             vlim=1.5    # max vel（rad/s）
                         )
             elif self.arm_version == "rebotRS" :
-                for motor_id in [1,2,3]:
-                    if  self.use_mode[motor_id] == "MIT":
-                        self.motor_handle[motor_id].send_mit(
-                            pos=-1*target_pos[motor_id-1] ,    
+                for motor_can_id in [1,2,3]:
+                    if  self.motors[motor_can_id].use_mode == "MIT":
+                        self.motors[motor_can_id].handle.send_mit(
+                            pos=-1*target_pos[motor_can_id - 1] ,    
                             vel=0.0,
                             kp=10.0 ,   
                             kd=6.0,    
                             tau=0.0   
                         )
-                    if  self.use_mode[motor_id] == "POS_VEL":
-                        self.motor_handle[motor_id].send_pos_vel(
+                    if  self.motors[motor_can_id].use_mode == "POS_VEL":
+                        self.motors[motor_can_id].handle.send_pos_vel(
                             pos=0.0,    # target angle（rad）
                             vlim=1.5    # max vel（rad/s）
                         )
                     time.sleep(dt)
-                for motor_id in [4,5,6,7]:
-                    if  self.use_mode[motor_id] == "MIT":
-                        self.motor_handle[motor_id].send_mit(
-                            pos=-1*target_pos[motor_id-1],    
+                for motor_can_id in [4,5,6,7]:
+                    if  self.motors[motor_can_id].use_mode == "MIT":
+                        self.motors[motor_can_id].handle.send_mit(
+                            pos=-1*target_pos[motor_can_id - 1],    
                             vel=0.0,
                             kp=60.0 ,   
                             kd=15.0,    
                             tau=0.0   
                         )
-                    if  self.use_mode[motor_id] == "POS_VEL":
-                        self.motor_handle[motor_id].send_pos_vel(
+                    if  self.motors[motor_can_id].use_mode == "POS_VEL":
+                        self.motors[motor_can_id].handle.send_pos_vel(
                             pos=0.0,    # target angle（rad）
                             vlim=1.5    # max vel（rad/s）
                         )
@@ -352,18 +367,11 @@ if __name__ == "__main__":
     with reBotArm_handle(ctrl,"rebotDM") as handle:
         if handle.is_connected:
             print("Controller is connected and ready.")
-            # print("Motor MIT Configurations:", handler.motor_mit_cfg)
-            # print("Motor POS_VEL Configurations:", handler.motor_pos_vel_cfg)
             print("Motor Use Modes:", handle.use_mode)
         else:
             print("Controller failed to connect.")
         # handle.set_zero_position()
         while True:
-            handle.move_to_joint_positions([0,0,0,0,0,0, 0])
-            # for motor_id in handle.expected_ids:
-            #     print(f"motor {motor_id}")
-            #     print(f"pos: {handle.motor_state[motor_id-1].pos:.3f} rad")
-            #     print(f"vel: {handle.motor_state[motor_id-1].vel:.3f} rad/s")
-            #     print(f"torque: {handle.motor_state[motor_id-1].torq:.3f} Nm\n")
+            handle.move_to_joint_positions([0,0,0,0,0,0,0])
             time.sleep(0.002)
 

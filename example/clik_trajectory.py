@@ -23,13 +23,19 @@ if __name__ == "__main__":
 
     with reBotArm_handle(ctrl,"rebotDM",config_path = project_root/"config/rebotDM_ik.yaml") as handle:
         if handle.is_connected:
+            for motor_can_id in list(range(1,8)) :
+                print(f"Motor id {handle.motors[motor_can_id].motor_id}")
+                print(f"Motor Mit cfg:{handle.motors[motor_can_id].mit_cfg}")
+                # print(f"Motor Pos Vel cfg:{handle.motors[motor_can_id].pos_vel_cfg}")
+                print(f"Motor Use Modes:{handle.motors[motor_can_id].use_mode}")
+                print(f"Motor Pos Max:{handle.motors[motor_can_id].pos_max}")
+                print(f"Motor Pos Min:{handle.motors[motor_can_id].pos_min}\n")
             print("Controller is connected and ready.")
-            print("Motor Use Modes:", handle.use_mode)
         else:
             print("Controller failed to connect.")
 
         # orginal_joints_pos = [0,0,0,0,0,0]
-        target_pos_point = [0.15 ,0 ,0.02 ,0,1.56 ,0]# 0.24 0 0.03 0 0.67 0   0.34 0 0 -0.3 1.04 -0.37  -0.03 0.02 0.41 -0.01 -0.06 0.11  0.15 0 0 0 1.56 0
+        target_pos_point = [0.24 ,0, 0.03, 0, 0.67, 0]# 0.24 0 0.03 0 0.67 0   0.34 0 0 -0.3 1.04 -0.37  -0.03 0.02 0.41 -0.01 -0.06 0.11  0.15 0 0 0 1.56 0
         Time = 2
         dt = 0.1
         traj_finish_flag = False

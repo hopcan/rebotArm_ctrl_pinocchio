@@ -6,7 +6,7 @@ from pathlib import Path
 project_root = Path(__file__).resolve().parent
 
 
-def gravity_conpensation_control(joints_pos,model,data) :
+def gravity_compensation_control(joints_pos,model,data) :
     motors_last_pos = joints_pos
     full_torques = np.zeros(7)
 
@@ -16,7 +16,9 @@ def gravity_conpensation_control(joints_pos,model,data) :
     full_torques[:6] = torque 
 
     #add conpensation
-    full_torques[3] *= 2.7   
+    full_torques[1] *= 1.05
+    full_torques[2] *= 1.1
+    full_torques[3] *= 2.65  
 
     return motors_last_pos,full_torques.tolist()
 
@@ -32,11 +34,11 @@ def forwardKinematics_compute (handle,model,data,joint_nums = None) :
 
     #get joints pos
     for motor_id in list(range(1, 8)) :
-        motors_now_pos[motor_id - 1] =  handle.motor_state[motor_id].pos
+        motors_now_pos[motor_id - 1] =  handle.motors[motor_id].state.pos
     pin.forwardKinematics(model, data, np.array(motors_now_pos[:6])) 
     pin.pin.updateFramePlacements(model, data)
 
-    return data.oMf[frame_id].translation , data.oMf[frame_id].rotation
+    return data.oMf[frame_id].translation.copy() , data.oMf[frame_id].rotation.copy()
 
 
 
