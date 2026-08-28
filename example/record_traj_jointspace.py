@@ -71,9 +71,9 @@ def input_watcher():
             start_playback = True
 
         elif user_input.strip().lower() == "print":
-            print("录制轨迹：\n")
-            for matrix in record_traj:
-                print(matrix)
+            print("打印录制关节轨迹：\n")
+            for traj in record_traj:
+                print(traj)
                 print("\n")
 
         elif user_input.strip().lower() == "help":
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                     start_record_time = last_record_time
                     record_traj.clear() #录制开始先清空之前录制的轨迹
                     record_q.clear()
-                    print("开始录制轨迹")
+                    print("\n开始录制轨迹\n")
                     last_Matrix_t, last_Matrix_r = pinocchio_handle.forwardKinematics_compute (handle,model,data)
 
                 elapsed_time = current_time - start_record_time

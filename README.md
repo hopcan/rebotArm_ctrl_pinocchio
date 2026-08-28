@@ -24,15 +24,23 @@
 ├── config/
 │   ├── rebotDM.yaml
 │   ├── rebotDM_ik.yaml
+│   ├── rebotDM_gravity.yaml
 │   └── rebotRS.yaml
 ├── example/
 │   ├── clik_trajectory.py
 │   ├── close_loop_inverse_kinematics.py
 │   ├── forward_Kinematics_compute.py
-│   └── gravity_conpensation_compute.py
+│   ├── gravity_compensation_adm.py
+│   ├── gravity_compensation_compute.py
+│   ├── record_traj_cartesian.py
+│   └── record_traj_jointspace.py
 ├── urdf/
 │   ├── 00-arm-rs_asm-v3/
+│   │   ├── meshes/
+│   │   └── urdf/
 │   └── reBot-DevArm_fixend_description/
+│       ├── meshes/
+│       └── urdf/
 └── ...
 ```
 
@@ -83,7 +91,7 @@ python example/forward_Kinematics_compute.py
 ### 2. 重力补偿示例
 
 ```bash
-python example/gravity_conpensation_compute.py
+python example/gravity_compensation_compute.py
 ```
 
 用于：
@@ -92,7 +100,19 @@ python example/gravity_conpensation_compute.py
 - 计算重力矩
 - 通过 `move_to_joint_positions(..., torque=...)` 进行补偿控制
 
-### 3. 闭环逆运动学示例
+### 3. 自适应重力补偿示例
+
+```bash
+python example/gravity_compensation_adm.py
+```
+
+用于：
+
+- 在重力补偿的基础上加入自适应补偿项
+- 通过外部扰动/误差估计调节扭矩
+- 适合调试机械臂受力补偿和阻抗特性
+
+### 4. 闭环逆运动学示例
 
 ```bash
 python example/close_loop_inverse_kinematics.py
@@ -104,7 +124,7 @@ python example/close_loop_inverse_kinematics.py
 - 控制机械臂移动到目标点
 - 观察末端位置和姿态变化
 
-### 4. 轨迹生成与执行示例
+### 5. 轨迹生成与执行示例
 
 ```bash
 python example/clik_trajectory.py
@@ -116,6 +136,45 @@ python example/clik_trajectory.py
 - 使用 CLIK 计算一系列关节配置
 - 对机械臂按轨迹执行运动
 
+### 6. 笛卡尔空间录制轨迹示例
+
+```bash
+python example/record_traj_cartesian.py
+```
+
+用于：
+
+- 在任务空间中录制末端位姿轨迹
+- 通过 IK 反解把每个笛卡尔位姿转换回关节空间
+- 在录制完成后进行回放和保存
+
+注意：这个示例在笛卡尔轨迹接近奇异位形时会失败。代码里会检测机械臂的可操纵性（manipulability），当接近奇异点时会触发 `return None`，导致后续轨迹点无法继续求解。也就是说，若目标路径经过关节接近奇异配置的区域，`record_traj_cartesian` 可能中断，不能稳定生成完整轨迹。
+
+实际使用时应避免：
+
+- 让末端路径经过机械臂构型接近奇异位形
+- 目标点过度靠近极限姿态或姿态变化过大
+- 在接近奇异配置附近持续进行大步长笛卡尔移动
+
+如果轨迹必须通过这些区域，通常需要：
+
+- 减小步长
+- 重新规划路径
+- 使用关节空间录制/回放方案
+- 对候选路径做奇异性检测与避让
+
+### 7. 关节空间录制轨迹示例
+
+```bash
+python example/record_traj_jointspace.py
+```
+
+用于：
+
+- 直接在关节空间中录制关节角度序列
+- 保存时间戳和关节角度，便于后续回放
+- 适合实现“手动示教”或“关节轨迹复现”场景
+
 ## 常见注意事项
 
 - 该仓库中的示例脚本会直接访问机械臂控制器，必须确保机械臂已连接并处于可操作状态。
@@ -124,6 +183,7 @@ python example/clik_trajectory.py
   - 机械臂电源是否开启
   - `motorbridge` 是否已正确安装
 - 若出现 Pinocchio 相关错误，检查是否使用了兼容的 Python 版本，以及 `pin` 是否成功安装。
+- 任务空间轨迹（Cartesian trajectory）尤其容易在奇异点附近失败，`record_traj_cartesian.py` 对此有明确处理：检测到接近奇异点后直接返回失败，避免继续错误求解。
 
 ## 相关文件
 
